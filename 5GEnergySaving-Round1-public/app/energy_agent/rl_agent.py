@@ -19,7 +19,7 @@ class RLAgent:
     def __init__(self, n_cells, n_ues, max_time, log_file='rl_agent.log', use_gpu=False):
         """
         Initialize PPO agent for 5G energy saving
-        
+
         Args:
             n_cells (int): Number of cells to control
             n_ues (int): Number of UEs in network
@@ -33,17 +33,17 @@ class RLAgent:
         self.max_time = max_time
         self.use_gpu = use_gpu and torch.cuda.is_available()
         self.device = torch.device('cuda' if self.use_gpu else 'cpu')
-        
+
         # State dimensions: 17 simulation features + 14 network features + (n_cells * 12) cell features
         self.state_dim = 17 + 14 + (n_cells * 12)
         self.action_dim = n_cells  # Power ratio for each cell
-        
+
         # Normalization parameters - learned from data
         self.state_normalizer = StateNormalizer(self.state_dim, n_cells=n_cells)
-        
+
         self.actor = Actor(self.state_dim, self.action_dim, hidden_dim=256).to(self.device)
         self.critic = Critic(self.state_dim, hidden_dim=256).to(self.device)
-        
+
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=3e-4, eps=1e-5)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=1e-3, eps=1e-5)
 
@@ -56,27 +56,115 @@ class RLAgent:
         self.buffer_size = 2048
         self.entropy_coef = 0.01  # Entropy coefficient for exploration
         self.value_loss_coef = 0.5  # Value loss coefficient
-        
+
         # Experience buffer
         self.buffer = TransitionBuffer(self.buffer_size)
-        
+
         self.training_mode = True
         self.total_episodes = 0
         self.total_steps = 0
         self.episode_rewards = deque(maxlen=100)
         self.episode_steps = 0
         self.current_episode_reward = 0.0
-        
+
+        # E_opt values from opts.txt (optimal energy consumption)
+        # These are reference values when all cells operate at minimum power
+        self.e_opts = {
+            12: 0.181,   # indoor_hotspot (12 cells)
+            21: None,    # 21 cells could be dense_urban (1.708) or urban_macro (1.929)
+            57: 5.799    # rural (57 cells)
+        }
+        # For 21 cells, we'll detect scenario dynamically based on other features
+        self.e_opt_21_dense = 1.708    # Dense Urban
+        self.e_opt_21_urban = 1.929    # Urban Macro
+
+        # Load E_opt from file if available
+        self._load_e_opts()
+
         self.setup_logging(log_file)
-        
+
         self.logger.info(f"PPO Agent initialized: {n_cells} cells, {n_ues} UEs")
         self.logger.info(f"State dim: {self.state_dim}, Action dim: {self.action_dim}")
         self.logger.info(f"Device: {self.device}")
+        self.logger.info(f"E_opt loaded: {self.e_opts}")
     
+    def _load_e_opts(self):
+        """Load E_opt values from opts.txt file"""
+        try:
+            # Try to find opts.txt in common locations
+            possible_paths = [
+                'opts.txt',
+                '../opts.txt',
+                '../../opts.txt',
+                '/media/tan/F/Viettel_AI_Challenge/Viettel_AI_RACE/5GEnergySaving-Round1-public/opts.txt'
+            ]
+
+            for path in possible_paths:
+                if os.path.exists(path):
+                    with open(path, 'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith('#'):
+                                parts = line.split()
+                                if len(parts) == 2:
+                                    scenario, e_opt = parts[0], float(parts[1])
+                                    if scenario == 'indoor_hotspot':
+                                        self.e_opts[12] = e_opt
+                                    elif scenario == 'dense_urban':
+                                        self.e_opt_21_dense = e_opt
+                                    elif scenario == 'urban_macro':
+                                        self.e_opt_21_urban = e_opt
+                                    elif scenario == 'rural':
+                                        self.e_opts[57] = e_opt
+                    print(f"E_opt values loaded from {path}")
+                    return
+            print("Warning: opts.txt not found, using default E_opt values")
+        except Exception as e:
+            print(f"Warning: Could not load E_opt values: {e}")
+
+    def get_e_opt(self, state):
+        """
+        Get E_opt value for current scenario based on state
+
+        Args:
+            state: Current state vector
+
+        Returns:
+            e_opt: Optimal energy consumption for this scenario (kWh)
+        """
+        state = np.array(state).flatten()
+
+        # Determine number of cells
+        n_cells = int(state[0]) if len(state) > 0 else self.n_cells
+
+        # For 12 and 57 cells, E_opt is unambiguous
+        if n_cells in self.e_opts and self.e_opts[n_cells] is not None:
+            return self.e_opts[n_cells]
+
+        # For 21 cells, distinguish between Dense Urban and Urban Macro
+        if n_cells == 21:
+            # Use n_ues to distinguish:
+            # Dense Urban: 300 UEs, Urban Macro: 210 UEs
+            n_ues = int(state[1]) if len(state) > 1 else self.n_ues
+            if n_ues > 250:  # Dense Urban
+                return self.e_opt_21_dense
+            else:  # Urban Macro
+                return self.e_opt_21_urban
+
+        # Fallback: use current n_cells setting
+        if self.n_cells == 12:
+            return 0.181
+        elif self.n_cells == 21:
+            return self.e_opt_21_urban  # Default to urban_macro (harder scenario)
+        elif self.n_cells == 57:
+            return 5.799
+        else:
+            return 1.0  # Fallback value
+
     def normalize_state(self, state):
         """Normalize state vector to [0, 1] range"""
         return self.state_normalizer.normalize(state)
-    
+
     def setup_logging(self, log_file):
         """Setup logging configuration"""
         self.logger = logging.getLogger('PPOAgent')
@@ -227,12 +315,13 @@ class RLAgent:
     ## OPTIONAL: Modify reward calculation as needed
     def calculate_reward(self, prev_state, action, current_state):
         """
-        Calculate reward based on energy savings and KPI constraints
+        IMPROVED: Calculate reward with E_opt awareness for better score optimization
 
         Reward structure:
-        1. Energy efficiency: Minimize energy consumption
-        2. QoS constraints: Strict penalties for violations (drop rate, latency, CPU, PRB)
-        3. Operational stability: Smooth power adjustments
+        1. E_opt-aware energy reward: Guide agent to approach E_opt
+        2. QoS constraint penalties: CRITICAL - zero tolerance for violations
+        3. Energy efficiency bonus: Reward being close to E_opt
+        4. Operational stability: Smooth transitions and load-awareness
         """
         if prev_state is None:
             return 0.0
@@ -246,7 +335,7 @@ class RLAgent:
         network_start = 17  # After simulation features
 
         # Current state metrics - Network features
-        current_energy = current_state[network_start + 0]  # totalEnergy
+        current_energy = current_state[network_start + 0]  # totalEnergy (kWh accumulated)
         active_cells = current_state[network_start + 1]     # activeCells
         avg_drop_rate = current_state[network_start + 2]    # avgDropRate
         avg_latency = current_state[network_start + 3]      # avgLatency
@@ -268,64 +357,156 @@ class RLAgent:
         prev_drop_rate = prev_state[network_start + 2]
         prev_connected_ues = prev_state[network_start + 5]
 
-        # ========== 1. ENERGY EFFICIENCY REWARD ==========
-        # Reward lower energy consumption (normalized per UE served)
-        energy_per_ue = current_energy / max(connected_ues, 1)
-        energy_reward = -energy_per_ue * 0.5  # Negative because we want to minimize
+        # Get E_opt for current scenario
+        e_opt = self.get_e_opt(current_state)
 
-        # ========== 2. QoS CONSTRAINT PENALTIES (CRITICAL) ==========
+        # Current simulation progress
+        current_time = current_state[2]  # simTime
+        max_time = current_state[3]      # maxSimTime
+        progress = current_time / max(max_time, 1)
+
+        # ========== 1. E_OPT-AWARE ENERGY REWARD ==========
+        # Calculate instantaneous energy consumption (delta)
+        energy_delta = current_energy - prev_energy
+        energy_delta = max(energy_delta, 0.0001)  # Avoid division by zero
+
+        # Project final energy based on current rate
+        if progress > 0.1:  # After 10% of simulation
+            projected_final_energy = current_energy / progress
+        else:
+            projected_final_energy = current_energy * 10  # Rough estimate
+
+        # Calculate how close we are to E_opt (MAPE-like metric)
+        # Target: Get as close to E_opt as possible
+        energy_ratio = projected_final_energy / e_opt
+
+        # Reward structure based on energy_ratio:
+        # - ratio < 1.0: Below E_opt (impossible without QoS violations, but reward if achieved)
+        # - ratio 1.0-1.2: Excellent (close to optimal)
+        # - ratio 1.2-1.5: Good (acceptable range)
+        # - ratio 1.5-2.0: Moderate (needs improvement)
+        # - ratio > 2.0: Poor (significant penalty)
+
+        if energy_ratio < 1.2:
+            # Excellent zone: Strong positive reward
+            energy_reward = 20.0 * (1.2 - energy_ratio)  # Max +20 when ratio=1.0
+        elif energy_ratio < 1.5:
+            # Good zone: Mild positive reward
+            energy_reward = 10.0 * (1.5 - energy_ratio)  # +0 to +3
+        elif energy_ratio < 2.0:
+            # Moderate zone: Small negative
+            energy_reward = -5.0 * (energy_ratio - 1.5)  # 0 to -2.5
+        else:
+            # Poor zone: Strong negative
+            energy_reward = -10.0 * (energy_ratio - 1.5)  # < -5
+
+        # Immediate energy penalty (encourage reducing power at each step)
+        energy_reward -= energy_delta * 2.0
+
+        # ========== 2. QoS CONSTRAINT PENALTIES (CRITICAL - NO COMPROMISE) ==========
         constraint_penalty = 0.0
+        qos_violation = False
 
-        # Drop rate constraint - VERY STRICT
+        # Drop rate constraint - EXTREMELY STRICT
         if avg_drop_rate > drop_threshold:
-            constraint_penalty -= (avg_drop_rate - drop_threshold) * 50.0
-        elif avg_drop_rate > drop_threshold * 0.8:  # Warning zone
-            constraint_penalty -= (avg_drop_rate - drop_threshold * 0.8) * 5.0
+            constraint_penalty -= 100.0 * (avg_drop_rate - drop_threshold)
+            qos_violation = True
+        elif avg_drop_rate > drop_threshold * 0.9:  # Danger zone
+            constraint_penalty -= 20.0 * (avg_drop_rate - drop_threshold * 0.9)
+        elif avg_drop_rate > drop_threshold * 0.7:  # Warning zone
+            constraint_penalty -= 5.0 * (avg_drop_rate - drop_threshold * 0.7)
 
-        # Latency constraint - STRICT
+        # Latency constraint - VERY STRICT
         if avg_latency > latency_threshold:
-            constraint_penalty -= (avg_latency - latency_threshold) * 20.0
-        elif avg_latency > latency_threshold * 0.9:  # Warning zone
-            constraint_penalty -= (avg_latency - latency_threshold * 0.9) * 2.0
+            constraint_penalty -= 50.0 * (avg_latency - latency_threshold)
+            qos_violation = True
+        elif avg_latency > latency_threshold * 0.95:  # Danger zone
+            constraint_penalty -= 10.0 * (avg_latency - latency_threshold * 0.95)
+        elif avg_latency > latency_threshold * 0.8:  # Warning zone
+            constraint_penalty -= 3.0 * (avg_latency - latency_threshold * 0.8)
 
         # CPU constraint - STRICT
         if max_cpu > cpu_threshold:
-            constraint_penalty -= (max_cpu - cpu_threshold) * 30.0
-        elif max_cpu > cpu_threshold * 0.95:  # Warning zone
-            constraint_penalty -= (max_cpu - cpu_threshold * 0.95) * 3.0
+            constraint_penalty -= 40.0 * (max_cpu - cpu_threshold)
+            qos_violation = True
+        elif max_cpu > cpu_threshold * 0.98:  # Danger zone
+            constraint_penalty -= 8.0 * (max_cpu - cpu_threshold * 0.98)
 
         # PRB constraint - STRICT
         if max_prb > prb_threshold:
-            constraint_penalty -= (max_prb - prb_threshold) * 30.0
-        elif max_prb > prb_threshold * 0.95:  # Warning zone
-            constraint_penalty -= (max_prb - prb_threshold * 0.95) * 3.0
+            constraint_penalty -= 40.0 * (max_prb - prb_threshold)
+            qos_violation = True
+        elif max_prb > prb_threshold * 0.98:  # Danger zone
+            constraint_penalty -= 8.0 * (max_prb - prb_threshold * 0.98)
 
-        # ========== 3. OPERATIONAL STABILITY REWARDS ==========
+        # ========== 3. E_OPT PROXIMITY BONUS ==========
+        # Extra reward for maintaining good energy-QoS balance
+        e_opt_bonus = 0.0
+
+        if not qos_violation and energy_ratio < 1.3:
+            # Excellent: Close to E_opt without QoS violations
+            e_opt_bonus = 15.0 * (1.3 - energy_ratio)
+        elif not qos_violation and energy_ratio < 1.5:
+            # Good: Reasonable energy with QoS compliance
+            e_opt_bonus = 5.0 * (1.5 - energy_ratio)
+
+        # ========== 4. OPERATIONAL STABILITY REWARDS ==========
         stability_reward = 0.0
 
-        # Reward maintaining or improving service
+        # Reward maintaining service quality
         if connected_ues >= prev_connected_ues:
             stability_reward += 0.5
+        else:
+            # Penalty for losing UEs (might indicate coverage issues)
+            stability_reward -= (prev_connected_ues - connected_ues) * 0.5
 
-        # Reward reducing drop rate
-        if avg_drop_rate < prev_drop_rate:
-            stability_reward += (prev_drop_rate - avg_drop_rate) * 2.0
+        # Reward improving drop rate
+        if avg_drop_rate < prev_drop_rate and prev_drop_rate > 0:
+            stability_reward += (prev_drop_rate - avg_drop_rate) * 3.0
 
-        # Penalty for too aggressive power reduction (action variance)
+        # Load-adaptive penalty: Encourage matching power to load
+        avg_prb = current_state[network_start + 7] if network_start + 7 < len(current_state) else 0.5
+        avg_action = np.mean(action)
+        load_mismatch = abs(avg_prb - avg_action)
+        if load_mismatch > 0.3:  # Power and load significantly mismatched
+            stability_reward -= load_mismatch * 3.0
+
+        # Penalty for extreme action variance (all cells should be somewhat coordinated)
         action_variance = np.std(action)
-        if action_variance > 0.3:  # Too much variation
-            stability_reward -= action_variance * 2.0
+        if action_variance > 0.35:  # Too much variation
+            stability_reward -= action_variance * 5.0
 
-        # Bonus for keeping cells active (avoid shutting down too many)
+        # Bonus for keeping most cells active (avoid coverage holes)
         total_cells = current_state[0]  # totalCells from simulation features
-        if active_cells >= total_cells * 0.7:  # At least 70% cells active
-            stability_reward += 1.0
+        active_ratio = active_cells / max(total_cells, 1)
+        if active_ratio >= 0.8:  # At least 80% cells active
+            stability_reward += 2.0
+        elif active_ratio < 0.5:  # Too many cells off
+            stability_reward -= 5.0 * (0.5 - active_ratio)
 
-        # ========== 4. TOTAL REWARD ==========
-        total_reward = energy_reward + constraint_penalty + stability_reward
+        # ========== 5. TOTAL REWARD ==========
+        total_reward = (
+            energy_reward +
+            constraint_penalty +
+            e_opt_bonus +
+            stability_reward
+        )
 
-        # Clip to reasonable range
-        total_reward = float(np.clip(total_reward, -200, 50))
+        # Clip to reasonable range (wider range to allow strong penalties)
+        total_reward = float(np.clip(total_reward, -500, 100))
+
+        # Log reward components for debugging (periodically)
+        if self.total_steps % 100 == 0:
+            self.logger.info(
+                f"Reward breakdown - Energy: {energy_reward:.2f}, "
+                f"QoS_penalty: {constraint_penalty:.2f}, "
+                f"E_opt_bonus: {e_opt_bonus:.2f}, "
+                f"Stability: {stability_reward:.2f}, "
+                f"Total: {total_reward:.2f}, "
+                f"E_ratio: {energy_ratio:.3f}, "
+                f"E_projected: {projected_final_energy:.3f}, "
+                f"E_opt: {e_opt:.3f}"
+            )
 
         return total_reward
     
