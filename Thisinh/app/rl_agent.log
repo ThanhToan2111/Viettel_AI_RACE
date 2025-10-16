@@ -1,0 +1,75 @@
+2025-10-15 13:31:35,926 - PPOAgent - INFO - PPO Agent initialized: 21 cells, 300 UEs
+2025-10-15 13:31:35,927 - PPOAgent - INFO - State dim: 283, Action dim: 21
+2025-10-15 13:31:35,927 - PPOAgent - INFO - Device: cpu
+2025-10-15 13:31:36,166 - PPOAgent - INFO - Starting episode 1
+2025-10-15 13:38:22,368 - PPOAgent - INFO - Episode 1 ended: Steps=199, Reward=-61.21, Avg100=-61.21
+2025-10-15 13:38:23,162 - PPOAgent - INFO - Training completed: Actor loss=0.2194, Critic loss=125.3455
+2025-10-15 13:38:23,609 - PPOAgent - INFO - PPO Agent initialized: 12 cells, 120 UEs
+2025-10-15 13:38:23,610 - PPOAgent - INFO - State dim: 175, Action dim: 12
+2025-10-15 13:38:23,611 - PPOAgent - INFO - Device: cpu
+2025-10-15 13:38:23,920 - PPOAgent - INFO - Starting episode 1
+2025-10-15 13:42:12,003 - PPOAgent - INFO - Episode 1 ended: Steps=299, Reward=-96.60, Avg100=-96.60
+2025-10-15 13:42:12,591 - PPOAgent - INFO - Training completed: Actor loss=0.3493, Critic loss=216.0309
+2025-10-15 13:42:13,002 - PPOAgent - INFO - PPO Agent initialized: 57 cells, 100 UEs
+2025-10-15 13:42:13,002 - PPOAgent - INFO - State dim: 715, Action dim: 57
+2025-10-15 13:42:13,003 - PPOAgent - INFO - Device: cpu
+2025-10-15 13:42:13,117 - PPOAgent - INFO - Starting episode 1
+2025-10-15 13:58:36,880 - PPOAgent - INFO - Episode 1 ended: Steps=399, Reward=-15873.46, Avg100=-15873.46
+2025-10-15 13:58:37,618 - PPOAgent - INFO - Training completed: Actor loss=0.1419, Critic loss=15596.3291
+2025-10-15 13:58:38,333 - PPOAgent - INFO - PPO Agent initialized: 21 cells, 300 UEs
+2025-10-15 13:58:38,334 - PPOAgent - INFO - State dim: 283, Action dim: 21
+2025-10-15 13:58:38,335 - PPOAgent - INFO - Device: cpu
+2025-10-15 13:58:38,520 - PPOAgent - INFO - Starting episode 1
+2025-10-15 14:10:27,957 - PPOAgent - INFO - Episode 1 ended: Steps=399, Reward=-233.73, Avg100=-233.73
+2025-10-15 14:10:28,575 - PPOAgent - INFO - Training completed: Actor loss=0.4977, Critic loss=1037.8239
+2025-10-15 14:28:28,968 - PPOAgent - INFO - PPO Agent initialized: 21 cells, 300 UEs
+2025-10-15 14:28:28,969 - PPOAgent - INFO - State dim: 283, Action dim: 21
+2025-10-15 14:28:28,970 - PPOAgent - INFO - Device: cpu
+2025-10-15 14:28:29,223 - PPOAgent - INFO - Starting episode 1
+2025-10-15 14:34:52,451 - PPOAgent - INFO - Episode 1 ended: Steps=199, Reward=-9299.92, Avg100=-9299.92
+2025-10-15 14:34:54,116 - PPOAgent - INFO - Training completed: Actor loss=-0.1999, Critic loss=536322.8750
+2025-10-15 14:34:54,551 - PPOAgent - INFO - PPO Agent initialized: 12 cells, 120 UEs
+2025-10-15 14:34:54,552 - PPOAgent - INFO - State dim: 175, Action dim: 12
+2025-10-15 14:34:54,552 - PPOAgent - INFO - Device: cpu
+2025-10-15 14:34:54,881 - PPOAgent - INFO - Starting episode 1
+2025-10-15 14:38:24,463 - PPOAgent - INFO - Episode 1 ended: Steps=299, Reward=-2887.37, Avg100=-2887.37
+2025-10-15 14:38:25,444 - PPOAgent - INFO - Training completed: Actor loss=-0.1121, Critic loss=17658.0703
+2025-10-15 14:38:26,629 - PPOAgent - INFO - PPO Agent initialized: 57 cells, 100 UEs
+2025-10-15 14:38:26,630 - PPOAgent - INFO - State dim: 715, Action dim: 57
+2025-10-15 14:38:26,631 - PPOAgent - INFO - Device: cpu
+2025-10-15 14:38:26,858 - PPOAgent - INFO - Starting episode 1
+2025-10-15 14:55:58,277 - PPOAgent - INFO - Episode 1 ended: Steps=399, Reward=-79800.00, Avg100=-79800.00
+2025-10-15 14:55:59,314 - PPOAgent - INFO - Training completed: Actor loss=-1.5721, Critic loss=10401264.0000
+2025-10-15 14:55:59,948 - PPOAgent - INFO - PPO Agent initialized: 21 cells, 300 UEs
+2025-10-15 14:55:59,949 - PPOAgent - INFO - State dim: 283, Action dim: 21
+2025-10-15 14:55:59,950 - PPOAgent - INFO - Device: cpu
+2025-10-15 14:56:00,154 - PPOAgent - INFO - Starting episode 1
+2025-10-15 15:06:36,799 - PPOAgent - INFO - Episode 1 ended: Steps=399, Reward=-19368.47, Avg100=-19368.47
+2025-10-15 15:06:37,734 - PPOAgent - INFO - Training completed: Actor loss=-0.2801, Critic loss=618219.6875
+2025-10-16 03:45:54,423 - PPOAgent - INFO - PPO Agent initialized: 21 cells, 300 UEs
+2025-10-16 03:45:54,424 - PPOAgent - INFO - State dim: 283, Action dim: 21
+2025-10-16 03:45:54,424 - PPOAgent - INFO - Device: cpu
+2025-10-16 03:45:54,425 - PPOAgent - INFO - E_opt loaded: {12: 0.181, 21: None, 57: 5.799}
+2025-10-16 03:45:54,682 - PPOAgent - INFO - Starting episode 1
+2025-10-16 03:45:57,773 - PPOAgent - INFO - Reward breakdown - Energy: -600.65, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.70, Total: -500.00, E_ratio: 61.565, E_projected: 105.154, E_opt: 1.708
+2025-10-16 03:48:42,746 - PPOAgent - INFO - Reward breakdown - Energy: -789.76, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.10, Total: -500.00, E_ratio: 75.103, E_projected: 128.277, E_opt: 1.708
+2025-10-16 03:51:08,515 - PPOAgent - INFO - Episode 1 ended: Steps=199, Reward=-99500.00, Avg100=-99500.00
+2025-10-16 03:51:09,022 - PPOAgent - INFO - Training completed: Actor loss=-0.1605, Critic loss=64726756.0000
+2025-10-16 03:51:09,203 - PPOAgent - INFO - PPO Agent initialized: 12 cells, 120 UEs
+2025-10-16 03:51:09,204 - PPOAgent - INFO - State dim: 175, Action dim: 12
+2025-10-16 03:51:09,205 - PPOAgent - INFO - Device: cpu
+2025-10-16 03:51:09,206 - PPOAgent - INFO - E_opt loaded: {12: 0.181, 21: None, 57: 5.799}
+2025-10-16 03:51:09,365 - PPOAgent - INFO - Starting episode 1
+2025-10-16 03:51:10,011 - PPOAgent - INFO - Reward breakdown - Energy: -95.63, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.70, Total: -94.93, E_ratio: 11.063, E_projected: 2.002, E_opt: 0.181
+2025-10-16 03:51:55,227 - PPOAgent - INFO - Reward breakdown - Energy: -446.27, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.68, Total: -445.59, E_ratio: 46.127, E_projected: 8.349, E_opt: 0.181
+2025-10-16 03:52:46,041 - PPOAgent - INFO - Reward breakdown - Energy: -524.91, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.70, Total: -500.00, E_ratio: 46.790, E_projected: 8.469, E_opt: 0.181
+2025-10-16 03:53:38,484 - PPOAgent - INFO - Episode 1 ended: Steps=299, Reward=-139005.10, Avg100=-139005.10
+2025-10-16 03:53:39,048 - PPOAgent - INFO - Training completed: Actor loss=-0.0631, Critic loss=56595032.0000
+2025-10-16 03:53:39,279 - PPOAgent - INFO - PPO Agent initialized: 57 cells, 100 UEs
+2025-10-16 03:53:39,280 - PPOAgent - INFO - State dim: 715, Action dim: 57
+2025-10-16 03:53:39,280 - PPOAgent - INFO - Device: cpu
+2025-10-16 03:53:39,281 - PPOAgent - INFO - E_opt loaded: {12: 0.181, 21: None, 57: 5.799}
+2025-10-16 03:53:39,345 - PPOAgent - INFO - Starting episode 1
+2025-10-16 03:53:43,534 - PPOAgent - INFO - Reward breakdown - Energy: -280.76, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.68, Total: -280.08, E_ratio: 29.576, E_projected: 171.510, E_opt: 5.799
+2025-10-16 03:57:42,966 - PPOAgent - INFO - Reward breakdown - Energy: -289.20, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.69, Total: -288.51, E_ratio: 30.208, E_projected: 175.178, E_opt: 5.799
+2025-10-16 04:01:45,896 - PPOAgent - INFO - Reward breakdown - Energy: -286.40, QoS_penalty: 0.00, E_opt_bonus: 0.00, Stability: 0.70, Total: -285.70, E_ratio: 30.140, E_projected: 174.781, E_opt: 5.799
